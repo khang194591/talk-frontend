@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  #root {
+    @apply min-h-screen;
+  }
+  svg {
+    display: inline;
+    vertical-align: baseline;
+  }
+}
