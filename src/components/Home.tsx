@@ -1,50 +1,57 @@
-import { IconCamera, IconMicrophone } from "@tabler/icons-react";
-import { Button } from "antd";
+import {
+  UserPreferences,
+  addParticipant,
+  removeParticipant,
+  setUser,
+  setUserStream,
+  updateParticipant,
+} from "@/app/slides/meetingSlice";
+import { connectedRef, dbRef, name } from "@/plugins/firebase/database";
 import {
   child,
   onChildAdded,
+  onChildChanged,
   onChildRemoved,
   onDisconnect,
   onValue,
   push,
 } from "firebase/database";
 import { useEffect } from "react";
-import { useAppDispatch } from "../app";
-import {
-  addParticipant,
-  removeParticipant,
-  setUser,
-  setUserStream,
-} from "../app/slides/roomSlice";
-import { connectedRef, dbRef, username } from "../plugins/firebase/database";
-import ParticipantGrid from "./ParticipantGrid";
+import { useAppDispatch, useAppSelector } from "../app";
+import { Meeting } from "./meeting";
+
 export default function Home() {
   const participantRef = child(dbRef, "participants");
 
+  const { currentUser, stream } = useAppSelector((state) => state.meeting);
   const dispatch = useAppDispatch();
 
+  const isUserSet = !!currentUser;
+  const isStreamSet = !!stream;
+
   useEffect(() => {
-    const constraints: MediaStreamConstraints = {
+    const preferences: UserPreferences = {
       video: true,
       audio: false,
+      screen: false,
     };
 
-    navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+    navigator.mediaDevices.getUserMedia(preferences).then((stream) => {
       dispatch(setUserStream(stream));
     });
 
     onValue(connectedRef, (snap) => {
       if (snap.val()) {
         const userRef = push(participantRef, {
-          username,
-          constraints,
+          name,
+          preferences,
         });
         if (userRef.key) {
           dispatch(
             setUser({
               [userRef.key]: {
-                username,
-                constraints,
+                name,
+                ...preferences,
               },
             })
           );
@@ -53,38 +60,51 @@ export default function Home() {
       }
     });
 
-    onChildAdded(participantRef, (snap) => {
-      if (snap.key) {
-        const { username, constraints } = snap.val();
-        dispatch(
-          addParticipant({
-            [snap.key]: {
-              username,
-              constraints,
-            },
-          })
-        );
-      }
-    });
-
-    onChildRemoved(participantRef, (snap) =>
-      dispatch(removeParticipant(snap.key))
-    );
-
     return () => {};
   }, []);
 
-  return (
-    <div className="h-screen flex flex-col items-center justify-center divide-y">
-      <ParticipantGrid />
-      <div className="px-4 py-3 w-full flex items-center justify-center gap-2">
-        <Button size="large" shape="circle">
-          <IconMicrophone strokeWidth={1.5} />
-        </Button>
-        <Button size="large" shape="circle">
-          <IconCamera strokeWidth={1.5} />
-        </Button>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    if (isStreamSet && isUserSet) {
+      onChildAdded(participantRef, (snap) => {
+        if (snap.key) {
+          const preferenceUpdateEvent = child(
+            child(participantRef, snap.key),
+            "preferences"
+          );
+          onChildChanged(preferenceUpdateEvent, (preferenceSnap) => {
+            if (snap.key && preferenceSnap.key) {
+              console.log({
+                [snap.key]: {
+                  [preferenceSnap.key]: preferenceSnap.val(),
+                },
+              });
+
+              dispatch(
+                updateParticipant({
+                  [snap.key]: {
+                    [preferenceSnap.key]: preferenceSnap.val(),
+                  },
+                } as unknown as any)
+              );
+            }
+          });
+          const { name, preferences } = snap.val();
+          dispatch(
+            addParticipant({
+              [snap.key]: {
+                name,
+                ...preferences,
+              },
+            })
+          );
+        }
+      });
+
+      onChildRemoved(participantRef, (snap) =>
+        dispatch(removeParticipant(snap.key))
+      );
+    }
+  }, [isStreamSet, isUserSet]);
+
+  return <Meeting />;
 }

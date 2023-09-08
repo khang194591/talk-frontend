@@ -5,7 +5,7 @@ let dbRef = ref(getDatabase(app));
 
 const connectedRef = ref(getDatabase(app), ".info/connected");
 
-const username = prompt("What's your name?") ?? "Anoy";
+const name = prompt("What's your name?") ?? "Anoy";
 
 const urlparams = new URLSearchParams(window.location.search);
 const roomId = urlparams.get("id");
@@ -17,4 +17,4 @@ if (roomId) {
   window.history.replaceState(null, "Meet", "?id=" + dbRef.key);
 }
 
-export { dbRef, connectedRef, username };
+export { dbRef, connectedRef, name };

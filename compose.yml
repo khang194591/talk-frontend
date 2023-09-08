@@ -1,0 +1,10 @@
+services:
+  talk-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: talk-frontend
+    container_name: talk-frontend
+    restart: always
+    ports: 
+      - 80:80

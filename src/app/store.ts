@@ -1,12 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
-import { roomSlice } from "./slides/roomSlice";
+import { meetingSlice } from "./slides/meetingSlice";
 
 export const store = configureStore({
   reducer: {
-    room: roomSlice.reducer,
+    meeting: meetingSlice.reducer,
   },
-  middleware: (getDefaultMiddeware) =>
-    getDefaultMiddeware({ serializableCheck: false }),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({ serializableCheck: false }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
